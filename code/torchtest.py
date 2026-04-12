@@ -65,6 +65,7 @@ def main():
     print(' '.join(f'{classes[labels[j]]:5s}' for j in range(batch_size)))
 
     net = Net()   #初始化模型
+    net.load_state_dict(torch.load(PATH))
     criterion = nn.CrossEntropyLoss()  #初始化损失函数
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)  #初始化训练方法 学习率和冲量
     for epoch in range(2):  # loop over the dataset multiple times
