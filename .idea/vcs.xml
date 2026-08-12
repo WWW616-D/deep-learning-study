@@ -3,6 +3,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$/.." vcs="Git" />
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Transfer_Attack_study" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/pytorch-tutorial" vcs="Git" />
   </component>
 </project>
