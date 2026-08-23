@@ -76,8 +76,9 @@ def detect_input_size(model):
     for module in model.modules():
         if isinstance(module, nn.Conv2d):
             in_ch = module.weight.shape[1]
-            # 对于标准 ImageNet 模型，输入为 224；小模型另行处理
-            hw = 299 if in_ch == 3 else 32  # 粗略估计
+            # torchvision ImageNet 模型大多输入 224×224
+            # （inception 系列 299×299 由 load_model_flexible 特殊处理）
+            hw = 224 if in_ch == 3 else 28
             return (in_ch, hw, hw)
 
     # 4) 回退
@@ -146,10 +147,16 @@ class GDUAP:
         max_iter (int): 最大迭代次数
         lr (float): 学习率 / 迭代步长
         input_size (tuple): 输入图像的形状 (C, H, W)
+        prior (str): 人工图像样本类型:
+            - 'black'    : 全黑图像 (Black-image)
+            - 'range'    : 均匀分布噪声 (Range-prior)
+            - 'gaussian' : 高斯噪声 (Gaussian-prior, 默认)
+            - 'jigsaw'   : 拼图打乱的图像 (Jigsaw-prior)
         device (torch.device): 计算设备
     """
     def __init__(self, model, eps=10/255, max_iter=2000, lr=0.5,
-                 input_size=(3, 224, 224), noise_batch=1, device=None):
+                 input_size=(3, 224, 224), noise_batch=1,
+                 prior='gaussian', device=None):
 
         self.model = model
         self.model.eval()
@@ -158,8 +165,12 @@ class GDUAP:
         self.lr = lr
         self.input_size = input_size
         self.noise_batch = noise_batch
+        self.prior = prior
         self.device = device or torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
+
+        # Jigsaw-prior 的基准图像（首次使用时加载）
+        self._jigsaw_base = None
 
         # 收集目标层名称
         self.activation_layers = self._find_activation_layers()
@@ -266,6 +277,91 @@ class GDUAP:
                     total_loss += act.view(act.shape[0], -1).norm(p=2, dim=1).mean()
         return -total_loss  # 最大化 activation → 最小化 -activation
 
+    def _load_jigsaw_base(self):
+        """加载 Jigsaw-prior 的基准图像（本地 test_dog.jpg）"""
+        from PIL import Image
+        base_paths = ['../data/test_dog.jpg', 'data/test_dog.jpg',
+                      os.path.join(os.path.dirname(__file__), '..',
+                                   'data', 'test_dog.jpg')]
+        img = None
+        for p in base_paths:
+            if os.path.exists(p):
+                img = Image.open(p).convert('RGB')
+                break
+        if img is None:
+            # 没有基准图像就退化为随机噪声
+            return None
+        C, H, W = self.input_size
+        img = img.resize((W, H))
+        if C == 1:
+            # 单通道模型（如 MNIST）：转灰度
+            img = img.convert('L')
+        arr = np.array(img).astype(np.float32) / 255.0  # [0,1]
+        if C == 1:
+            arr = arr[..., None]  # (H, W, 1)
+        # 中心化到 [-1, 1]，与高斯噪声尺度可比
+        arr = (arr - 0.5) * 2.0
+        return arr
+
+    def _make_jigsaw_batch(self, n):
+        """
+        生成 n 个拼图打乱 (jigsaw) 的样本
+
+        将基准图像划分为 p×p 个小块，随机排列，生成结构性伪输入。
+        """
+        C, H, W = self.input_size
+        if self._jigsaw_base is None:
+            base = self._load_jigsaw_base()
+            if base is None:
+                return torch.randn((n, C, H, W), device=self.device)
+            self._jigsaw_base = torch.from_numpy(base).permute(2, 0, 1)
+
+        # 拼图网格大小（每个 patch ≥ 8×8）
+        p = max(2, min(8, H // 8, W // 8))
+        ph, pw = H // p, W // p
+
+        base = self._jigsaw_base.to(self.device)
+        patches = base.unfold(1, ph, ph).unfold(2, pw, pw)  # (C, p, p, ph, pw)
+        patches = patches.reshape(C, p * p, ph, pw)          # (C, p², ph, pw)
+        patches = patches.permute(1, 0, 2, 3)                # (p², C, ph, pw)
+
+        batch = []
+        for _ in range(n):
+            perm = torch.randperm(p * p, device=self.device)
+            shuffled = patches[perm]                         # (p², C, ph, pw)
+            shuffled = shuffled.permute(1, 0, 2, 3)          # (C, p², ph, pw)
+            img = shuffled.reshape(C, p * ph, p * pw)        # (C, H', W')
+            # 尺寸可能因整除损失少量像素，补到输入尺寸
+            if img.shape[1:] != (H, W):
+                img = F.interpolate(img.unsqueeze(0), size=(H, W),
+                                    mode='bilinear', align_corners=False)[0]
+            batch.append(img)
+        return torch.stack(batch)
+
+    def _make_prior_inputs(self):
+        """
+        根据 self.prior 生成一批人工图像样本
+
+        Returns:
+            torch.Tensor: (noise_batch, C, H, W)
+        """
+        n = self.noise_batch
+        if self.prior == 'black':
+            # Black-image: 全黑图像（全零）
+            return torch.zeros((n, *self.input_size), device=self.device)
+        elif self.prior == 'range':
+            # Range-prior: 均匀分布噪声 U(-1, 1)
+            return torch.rand((n, *self.input_size), device=self.device) * 2 - 1
+        elif self.prior == 'gaussian':
+            # Gaussian-prior: 标准高斯噪声 N(0, 1)
+            return torch.randn((n, *self.input_size), device=self.device)
+        elif self.prior == 'jigsaw':
+            # Jigsaw-prior: 拼图打乱的图像
+            return self._make_jigsaw_batch(n)
+        else:
+            raise ValueError(f"未知的 prior 类型: {self.prior}，"
+                             f"可选: black, range, gaussian, jigsaw")
+
     def generate(self, verbose=True):
         """
         生成通用对抗扰动（GD-UAP 主循环）
@@ -282,6 +378,7 @@ class GDUAP:
             print(f"  最大迭代次数: {self.max_iter}")
             print(f"  输入尺寸: {self.input_size}")
             print(f"  噪声批次大小: {self.noise_batch}")
+            print(f"  人工图像样本 (prior): {self.prior}")
             print(f"  目标激活层: {len(self.activation_layers)} 层")
             print(f"  设备: {self.device}")
             print("=" * 60)
@@ -302,16 +399,15 @@ class GDUAP:
         for iteration in range(1, self.max_iter + 1):
             optimizer.zero_grad()
 
-            # 关键：使用随机噪声作为伪输入，而非真实数据！
-            # 每次迭代生成 B 个随机噪声样本，降低梯度方差
-            random_inputs = torch.randn((self.noise_batch, *self.input_size),
-                                        device=self.device)
+            # 关键：使用人工图像样本 (prior) 作为伪输入，而非真实数据！
+            # 每次迭代生成 B 个样本，降低梯度方差
+            prior_inputs = self._make_prior_inputs()
             # 将扰动扩展到 batch 维度
             v_batch = v.expand(self.noise_batch, -1, -1, -1)
 
-            # 前向传播（输入 = 随机噪声 + 扰动）
+            # 前向传播（输入 = 人工样本 + 扰动）
             # 注意：我们只需要激活值来计算 loss，不需要真实的 logits
-            self.model(random_inputs + v_batch)
+            self.model(prior_inputs + v_batch)
 
             # 计算 GD-UAP 层间目标函数
             # loss 自动在 noise batch 上取均值
@@ -368,6 +464,38 @@ class GDUAP:
 
 # ==================== 评估函数 ====================
 
+def _extract_normalize(dataloader):
+    """
+    从 dataloader 的 dataset transform 中提取归一化参数 (mean, std)
+
+    CIFAR-10 使用 Normalize((0.5,0.5,0.5),(0.5,0.5,0.5)) 时返回
+    (tensor([0.5,0.5,0.5]), tensor([0.5,0.5,0.5]))，否则返回 (None, None)。
+
+    Returns:
+        (mean, std): torch.Tensor 或 None
+    """
+    try:
+        ds = dataloader.dataset
+        if hasattr(ds, 'dataset'):
+            ds = ds.dataset  # Subset 包装
+        transform = getattr(ds, 'transform', None)
+        if transform is None:
+            return None, None
+        # 从 Compose 中找 Normalize
+        from torchvision.transforms import Compose, Normalize
+        if isinstance(transform, Compose):
+            for t in transform.transforms:
+                if isinstance(t, Normalize):
+                    return (torch.tensor(t.mean, dtype=torch.float32),
+                            torch.tensor(t.std, dtype=torch.float32))
+        elif isinstance(transform, Normalize):
+            return (torch.tensor(transform.mean, dtype=torch.float32),
+                    torch.tensor(transform.std, dtype=torch.float32))
+    except Exception:
+        pass
+    return None, None
+
+
 def evaluate_uap(model, v, dataloader, device, verbose=True):
     """
     评估通用扰动在测试集上的表现
@@ -389,7 +517,13 @@ def evaluate_uap(model, v, dataloader, device, verbose=True):
     # 确保扰动在正确的设备上
     v = v.to(device)
 
-    for images, labels in dataloader:
+    # 检测 dataloader 的归一化方式（如 CIFAR-10 用 Normalize(0.5, 0.5)）
+    # 扰动 v 是在原始像素空间 [0,1] 上生成的，评估时需先反归一化再加扰动
+    norm_mean, norm_std = _extract_normalize(dataloader)
+
+    for batch in dataloader:
+        # 兼容 2 元组 (images, labels) 和 3 元组 (images, labels, filenames)
+        images, labels = batch[0], batch[1]
         images = images.to(device)
         labels = labels.to(device)
         batch_size = images.shape[0]
@@ -406,7 +540,16 @@ def evaluate_uap(model, v, dataloader, device, verbose=True):
             orig_preds = orig_out.argmax(dim=1)
 
             # 对抗预测（加入 UAP）
-            adv_images = torch.clamp(images + v_resized, 0, 1)
+            if norm_mean is not None:
+                # 图像已归一化 → 先反归一化到 [0,1]，加扰动，再归一化
+                nm = norm_mean.view(1, -1, 1, 1).to(images.device)
+                ns = norm_std.view(1, -1, 1, 1).to(images.device)
+                images_raw = images * ns + nm
+                adv_raw = torch.clamp(images_raw + v_resized, 0, 1)
+                adv_images = (adv_raw - nm) / ns
+            else:
+                # 图像未归一化 → 直接加扰动
+                adv_images = torch.clamp(images + v_resized, 0, 1)
             adv_out = model(adv_images)
             adv_preds = adv_out.argmax(dim=1)
 
@@ -444,20 +587,32 @@ def evaluate_uap(model, v, dataloader, device, verbose=True):
     }
 
 
-def evaluate_uap_single_image(model, v, image_path, device, class_names=None):
+def evaluate_uap_single_image(model, v, image_path, device, class_names=None,
+                              norm_mean=None, norm_std=None):
     """
     在单张图片上可视化 UAP 攻击效果
+
+    Args:
+        norm_mean (list/tensor, optional): 图像归一化均值（如 CIFAR-10 的 0.5）
+        norm_std (list/tensor, optional): 图像归一化标准差（如 CIFAR-10 的 0.5）
     """
     model.eval()
 
     # 使用扰动的尺寸作为模型期望的输入尺寸
     input_size = v.shape[-2:]  # (H, W)
 
-    # 加载并预处理图像
-    transform = transforms.Compose([
-        transforms.Resize(input_size),
-        transforms.ToTensor(),
-    ])
+    # 加载并预处理图像（可选归一化）
+    if norm_mean is not None:
+        transform = transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(norm_mean, norm_std),
+        ])
+    else:
+        transform = transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.ToTensor(),
+        ])
 
     image = Image.open(image_path).convert('RGB')
     img_tensor = transform(image).unsqueeze(0).to(device)
@@ -468,8 +623,15 @@ def evaluate_uap_single_image(model, v, image_path, device, class_names=None):
         orig_idx = out.argmax(dim=1).item()
         orig_conf = torch.softmax(out, dim=1).max().item()
 
-    # 对抗预测（v 已经与模型输入尺寸匹配，无需 resize）
-    adv_tensor = torch.clamp(img_tensor + v, 0, 1)
+    # 对抗预测（v 在原始像素空间，需反归一化再加扰动）
+    if norm_mean is not None:
+        nm = torch.tensor(norm_mean).view(1, -1, 1, 1).to(device)
+        ns = torch.tensor(norm_std).view(1, -1, 1, 1).to(device)
+        raw = img_tensor * ns + nm
+        adv_raw = torch.clamp(raw + v, 0, 1)
+        adv_tensor = (adv_raw - nm) / ns
+    else:
+        adv_tensor = torch.clamp(img_tensor + v, 0, 1)
     with torch.no_grad():
         adv_out = model(adv_tensor)
         adv_idx = adv_out.argmax(dim=1).item()
@@ -615,8 +777,10 @@ def load_data(dataset_name, batch_size=64):
     data_dir = '../data'
 
     if dataset_name == 'cifar10':
+        # 注意: 与 torchtest.py 训练时的归一化保持一致 (mean=0.5, std=0.5)
         transform = transforms.Compose([
             transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ])
         testset = datasets.CIFAR10(root=data_dir, train=False,
                                    download=True, transform=transform)
@@ -632,10 +796,17 @@ def load_data(dataset_name, batch_size=64):
         classes = tuple(str(i) for i in range(10))
 
     elif dataset_name == 'imagenet_val':
-        # 使用 ImageNet 验证集的子集（本地 images 文件夹）
+        # 使用本地 ImageNet 验证集子集（transferattack/data 文件夹）
+        sys_path_ok = _import_transferattack_utils()
+        if not sys_path_ok:
+            raise ImportError(
+                "无法导入 transferattack.utils (AdvDataset)，"
+                "请确认 D:/py/transferattack 目录存在")
+
         from transferattack.utils import AdvDataset
+        # 从 input_dir/images 读取 50 张原始测试图（eval=False）
         testset = AdvDataset(input_dir='../transferattack/data',
-                             eval=True)
+                             eval=False)
         classes = None
         test_loader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False, num_workers=0)
@@ -662,6 +833,28 @@ def _load_imagenet_labels():
         return [f'class_{i}' for i in range(1000)]
 
 
+def _import_transferattack_utils():
+    """
+    将 D:/py 加入 sys.path 以便导入 transferattack 包
+
+    Returns:
+        bool: 是否导入成功
+    """
+    import sys
+    try:
+        from transferattack import utils  # noqa: F401
+        return True
+    except ImportError:
+        py_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        if py_root not in sys.path:
+            sys.path.insert(0, py_root)
+        try:
+            from transferattack import utils  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+
 # ==================== 主程序 ====================
 
 def main():
@@ -683,6 +876,11 @@ def main():
                         help='学习率 (默认: 0.5, 大模型建议 0.1)')
     parser.add_argument('--noise-batch', type=int, default=1,
                         help='每轮迭代的随机噪声样本数 (默认: 1, 大模型建议 8)')
+    parser.add_argument('--prior', type=str, default='gaussian',
+                        choices=['black', 'range', 'gaussian', 'jigsaw'],
+                        help='人工图像样本类型 (默认: gaussian). '
+                             'black=全黑, range=均匀噪声, '
+                             'gaussian=高斯噪声, jigsaw=拼图图像')
     parser.add_argument('--batch-size', type=int, default=64,
                         help='评估时的批大小 (默认: 64)')
     parser.add_argument('--eval-only', action='store_true',
@@ -721,6 +919,7 @@ def main():
         lr=args.lr,
         input_size=input_size,
         noise_batch=args.noise_batch,
+        prior=args.prior,
         device=device,
     )
 
@@ -753,8 +952,14 @@ def main():
             class_names = None
         else:
             class_names = _load_imagenet_labels()
+        # CIFAR-10 训练时用了 Normalize(0.5,0.5)，单图评估需保持一致
+        if args.model == 'cifar10':
+            norm_mean, norm_std = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
+        else:
+            norm_mean, norm_std = None, None
         evaluate_uap_single_image(model, v, test_img, device,
-                                  class_names=class_names)
+                                  class_names=class_names,
+                                  norm_mean=norm_mean, norm_std=norm_std)
     else:
         # 尝试默认图片
         default_img = '../data/test_dog.jpg'
@@ -764,8 +969,13 @@ def main():
                 class_names = None
             else:
                 class_names = _load_imagenet_labels()
+            if args.model == 'cifar10':
+                norm_mean, norm_std = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
+            else:
+                norm_mean, norm_std = None, None
             evaluate_uap_single_image(model, v, default_img, device,
-                                      class_names=class_names)
+                                      class_names=class_names,
+                                      norm_mean=norm_mean, norm_std=norm_std)
 
     # 2. 数据集批量评估
     if args.dataset != 'imagenet_val':

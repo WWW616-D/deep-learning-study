@@ -12,10 +12,10 @@
           <value>
             <TabSessionState>
               <option name="provider" value="claude" />
-              <option name="sessionId" value="92ec77c6-6fbf-4571-bf1e-f607257e6f00" />
+              <option name="sessionId" value="b8ab1cf6-3444-4c12-89d5-8a1f58018782" />
               <option name="cwd" value="D:\py" />
-              <option name="model" value="claude-sonnet-4-7" />
-              <option name="permissionMode" value="default" />
+              <option name="model" value="claude-haiku-4-5" />
+              <option name="permissionMode" value="acceptEdits" />
             </TabSessionState>
           </value>
         </entry>

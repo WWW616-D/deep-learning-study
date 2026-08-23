@@ -1,3 +1,5 @@
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -65,10 +67,9 @@ def main():
     print(' '.join(f'{classes[labels[j]]:5s}' for j in range(batch_size)))
 
     net = Net()   #初始化模型
-    net.load_state_dict(torch.load(PATH))
     criterion = nn.CrossEntropyLoss()  #初始化损失函数
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)  #初始化训练方法 学习率和冲量
-    for epoch in range(2):  # loop over the dataset multiple times
+    for epoch in range(100):  # loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0): #函数返回索引和元素本身

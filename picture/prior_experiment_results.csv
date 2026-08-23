@@ -1,0 +1,5 @@
+Prior,Orig_Acc,Adv_Acc,Fooling_Rate,Acc_Drop
+Black-image,61.46,56.78,14.50,4.68
+Range-prior,61.46,54.93,18.55,6.53
+Gaussian-prior,61.46,55.10,17.90,6.36
+Jigsaw-prior,61.46,52.15,23.89,9.31
