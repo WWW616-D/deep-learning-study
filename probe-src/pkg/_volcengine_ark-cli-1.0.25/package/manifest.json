@@ -1,0 +1,65 @@
+{
+  "version": "1.0.25",
+  "platforms": {
+    "darwin-amd64": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/arkcli-1.0.25-darwin-amd64",
+      "sha256": "0cdc4d5d58000f2b464023ba97841693b68daf79cfc4639e9c320fb101eaba04",
+      "fallback": {
+        "url": "https://github.com/volcengine/ark-cli/releases/download/v1.0.25/arkcli-1.0.25-darwin-amd64",
+        "kind": "github-release"
+      }
+    },
+    "darwin-arm64": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/arkcli-1.0.25-darwin-arm64",
+      "sha256": "ba8f5dccb3a6c1f0869373796f405493956e351118278f4a1c7db8def5bb0182",
+      "fallback": {
+        "url": "https://github.com/volcengine/ark-cli/releases/download/v1.0.25/arkcli-1.0.25-darwin-arm64",
+        "kind": "github-release"
+      }
+    },
+    "linux-amd64": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/arkcli-1.0.25-linux-amd64",
+      "sha256": "0f30caa448dd60e0be38f887fd3806a8803fa6e794153c6b52b0eb4e7f8b5721",
+      "fallback": {
+        "url": "https://github.com/volcengine/ark-cli/releases/download/v1.0.25/arkcli-1.0.25-linux-amd64",
+        "kind": "github-release"
+      }
+    },
+    "linux-arm64": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/arkcli-1.0.25-linux-arm64",
+      "sha256": "fea4f62461b8af48d88ccd4d5b1df6f1521fc689a269634a4f48776f7b177fa5",
+      "fallback": {
+        "url": "https://github.com/volcengine/ark-cli/releases/download/v1.0.25/arkcli-1.0.25-linux-arm64",
+        "kind": "github-release"
+      }
+    },
+    "windows-amd64": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/arkcli-1.0.25-windows-amd64.exe",
+      "sha256": "bd7d5dddda1f976f7cc9e07336f9b2615cbf182ca0a53e1f3acc3b465663d5ad",
+      "fallback": {
+        "url": "https://github.com/volcengine/ark-cli/releases/download/v1.0.25/arkcli-1.0.25-windows-amd64.exe",
+        "kind": "github-release"
+      }
+    },
+    "windows-arm64": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/arkcli-1.0.25-windows-arm64.exe",
+      "sha256": "58d4215ea03cab30d3d9eaed3e0824c95f00135fd6ab7e285763285e6bed3287",
+      "fallback": {
+        "url": "https://github.com/volcengine/ark-cli/releases/download/v1.0.25/arkcli-1.0.25-windows-arm64.exe",
+        "kind": "github-release"
+      }
+    }
+  },
+  "skills": {
+    "primary": {
+      "url": "https://lf3-static.bytednsdoc.com/obj/eden-cn/psjryh/ljhwZthlaukjlkulzlp/prod/1.0.25/skills.tar.gz",
+      "sha256": "f590941cff78548372913260ac0f28889ae549975b249629adf3cdcfbbd43bd1",
+      "kind": "cdn"
+    },
+    "tag": "v1.0.25",
+    "fallback": {
+      "url": "https://github.com/volcengine/ark-cli/archive/refs/tags/v1.0.25.tar.gz",
+      "kind": "github"
+    }
+  }
+}

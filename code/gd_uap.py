@@ -666,7 +666,7 @@ def evaluate_uap_single_image(model, v, image_path, device, class_names=None,
     plt.suptitle('GD-UAP Attack Result', fontsize=14, fontweight='bold')
     plt.tight_layout()
     save_path = os.path.join(os.path.dirname(__file__) or '.',
-                             'gd_uap_result.png')
+                             '../picture/gd_uap_result.png')
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.show()
 
