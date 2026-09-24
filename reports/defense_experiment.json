@@ -1,0 +1,43 @@
+{
+  "seed": 0,
+  "epochs": 40,
+  "eps": 8.0,
+  "aa_samples": 1000,
+  "distill_T": 20.0,
+  "device": "cpu",
+  "models": {
+    "baseline": {
+      "clean": 71.39,
+      "aa_robust": 0.0,
+      "aa_time_s": 3.7,
+      "pgd20": 0.0,
+      "transfer20": 0.0
+    },
+    "mask_sat": {
+      "clean": 68.42,
+      "aa_robust": 0.1,
+      "aa_time_s": 10.0,
+      "pgd20": 0.2,
+      "bpda20": 1.4,
+      "transfer20": 50.5
+    },
+    "mask_prep": {
+      "clean": 68.85,
+      "aa_robust": 5.6,
+      "aa_time_s": 143.8,
+      "pgd20": 67.9,
+      "bpda20": 0.6,
+      "transfer20": 44.4
+    },
+    "teacher": {
+      "clean": 72.2
+    },
+    "distill": {
+      "clean": 68.83,
+      "aa_robust": 0.1,
+      "aa_time_s": 10.0,
+      "pgd20": 0.1,
+      "transfer20": 36.3
+    }
+  }
+}

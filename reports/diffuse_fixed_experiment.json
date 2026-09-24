@@ -1,0 +1,16 @@
+{
+  "mode": "fixed",
+  "p": 0.01,
+  "epochs": 60,
+  "eps": 8.0,
+  "aa_samples": 1000,
+  "device": "cpu",
+  "models": {
+    "diffuse": {
+      "clean": 85.06,
+      "aa_robust": 0.0,
+      "aa_time_s": 13.0,
+      "pgd20": 0.0
+    }
+  }
+}
