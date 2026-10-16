@@ -1,0 +1,42 @@
+{
+  "sigma": 0.2537,
+  "L_equiv": 0.1,
+  "ckpt": "pixeldp_L0.1_c1.pth",
+  "samples": 500,
+  "draws": 10000,
+  "alpha": 0.001,
+  "delta": 0.05,
+  "device": "cpu",
+  "clean_vote_acc": 72.6,
+  "rs_mean_radius": 0.4641,
+  "rs_median_radius": 0.3787,
+  "rs_positive_rate": 90.4,
+  "rs_mean_phat": 0.8451,
+  "pdp_mean_radius": 0.0694,
+  "pdp_median_radius": 0.0582,
+  "pdp_positive_rate": 84.6,
+  "ratio_mean_radius": 6.69,
+  "rs_certified_accuracy": {
+    "0.0": 72.6,
+    "0.02": 68.4,
+    "0.05": 66.6,
+    "0.1": 64.4,
+    "0.2": 57.6,
+    "0.3": 51.6,
+    "0.5": 35.2,
+    "0.75": 17.6,
+    "1.0": 12.8
+  },
+  "pdp_certified_accuracy": {
+    "0.0": 73.6,
+    "0.02": 60.2,
+    "0.05": 48.2,
+    "0.1": 29.6,
+    "0.2": 0.0,
+    "0.3": 0.0,
+    "0.5": 0.0,
+    "0.75": 0.0,
+    "1.0": 0.0
+  },
+  "cert_time_s": 391.1
+}

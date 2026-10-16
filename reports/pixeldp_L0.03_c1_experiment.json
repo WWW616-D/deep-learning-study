@@ -1,0 +1,30 @@
+{
+  "L": 0.03,
+  "eps": 1.0,
+  "delta": 0.05,
+  "mech": "gaussian",
+  "sigma": 0.0761,
+  "arch": "c1",
+  "epochs": 60,
+  "draws": 500,
+  "alpha": 0.01,
+  "device": "cpu",
+  "clean_single": 79.78,
+  "clean_mc": 82.3,
+  "cert_time_s": 39.2,
+  "mean_lmax": 0.0224,
+  "median_lmax": 0.0254,
+  "certified_accuracy": {
+    "0.0": 82.3,
+    "0.02": 56.4,
+    "0.05": 0.0,
+    "0.1": 0.0,
+    "0.2": 0.0,
+    "0.3": 0.0,
+    "0.5": 0.0
+  },
+  "cert_rate_positive": 86.8,
+  "eot_pgd20": 1.52,
+  "aa_rand": 7.0,
+  "aa_rand_time_s": 57.6
+}

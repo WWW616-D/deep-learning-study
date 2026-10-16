@@ -1,0 +1,80 @@
+# ==========================================================================
+#  llm_code / .gitignore
+#  Goal: keep the repository tiny. Datasets and checkpoints are LARGE
+#  (TinyStories alone is 7.6 GB) and must never be committed or pushed.
+#
+#  NOTE: do NOT add a blanket "*.txt" rule here -- it would also swallow
+#  requirements.txt and the tokenizer's merges.txt. Data files are already
+#  covered by the data/ rules below.
+# ==========================================================================
+
+# ---- Datasets ----------------------------------------------------------
+# Ignore every FILE under data/ but keep the directory skeleton visible.
+# Using a recursive rule means new subdirectories (data/sft/, data/eval/, ...)
+# are covered automatically instead of silently leaking big files.
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# ---- Secrets -----------------------------------------------------------
+# API keys live in .env, which is never committed.
+.env
+.env.*
+!.env.example
+secrets.json
+
+# Data-format files dropped anywhere else in the project
+*.jsonl
+*.parquet
+*.arrow
+*.zip
+*.tar
+*.gz
+*.bz2
+*.xz
+
+# ---- Training artifacts (a checkpoint is ~130 MB and up) ---------------
+runs/
+checkpoints/
+ckpt/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# ---- Logs --------------------------------------------------------------
+logs/
+*.log
+loss.csv
+
+# ---- Python ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# ---- Virtual environments ---------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Local scratch -----------------------------------------------------
+# TEMP is redirected here because the sandbox denies writes to the system temp
+# directory, and both ensurepip and pip need a writable temp dir.
+_tmp/
+*.tmp
+
+# ---- Editors / OS ------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>决策式攻击 (Boundary Attack) 实验 · 实时监控</title>
+<style>
+  :root{--bg:#0e131f;--card:#182034;--line:#28324c;--txt:#dce5f5;--dim:#7e8aa8;
+        --ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--info:#60a5fa;--acc:#a78bfa;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font:14px/1.6 "Segoe UI","Microsoft YaHei",sans-serif;padding:18px}
+  h1{font-size:19px;margin-bottom:3px}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+  .banner{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;
+          background:var(--card);border:1px solid var(--line);margin-bottom:14px}
+  .dot{width:11px;height:11px;border-radius:50%;background:var(--dim);flex:none}
+  .dot.run{background:var(--ok);animation:pulse 1.2s infinite}
+  .dot.done{background:var(--info)} .dot.err{background:var(--bad)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .banner b{font-size:15px}
+  .meta{margin-left:auto;text-align:right;color:var(--dim);font-size:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+  .card h2{font-size:13px;color:var(--dim);margin-bottom:10px;font-weight:600;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 9px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--dim);font-weight:600;font-size:12px}
+  .flow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .step{background:#111828;border:1px solid var(--line);border-radius:8px;padding:11px 13px}
+  .step .t{font-size:12px;color:var(--dim);margin-bottom:6px}
+  .step .v{font-size:15px;font-weight:600}
+  .low{color:var(--bad)} .mid{color:var(--warn)} .hi{color:var(--ok)}
+  .logbox{max-height:250px;overflow-y:auto;font-family:Consolas,monospace;font-size:12px;
+          color:#9fb2d0;white-space:pre-wrap;word-break:break-all}
+  .logbox div{padding:1px 0;border-bottom:1px dashed #1e2740}
+  .err{background:#3b1520;border:1px solid #7f1d1d;color:#fca5a5;padding:10px;border-radius:8px;
+       margin-bottom:14px;white-space:pre-wrap;font-size:12px;font-family:Consolas,monospace}
+  .tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;background:#243049;color:var(--info)}
+  .arrow{color:var(--acc);font-weight:700}
+</style>
+</head>
+<body>
+  <h1>决策式对抗攻击（Boundary Attack）实验监控</h1>
+  <div class="sub">Brendel et al. ICLR 2018 · AutoAttack → 边界攻击强化 → 再攻击 · 每 1.5 秒刷新</div>
+
+  <div class="banner">
+    <span class="dot" id="dot"></span>
+    <b id="phase">等待实验启动…</b>
+    <div class="meta"><div id="clock"></div><div id="elapsed"></div></div>
+  </div>
+
+  <div class="err" id="errbox" style="display:none"></div>
+
+  <div class="card">
+    <h2>核心对比：AA 鲁棒率 → AA + 边界攻击后鲁棒率</h2>
+    <table>
+      <thead><tr>
+        <th>目标模型</th><th>AA 协议</th><th>R1 (AA)</th><th>AA 攻破</th><th>幸存者</th>
+        <th>AA 扰动 L2(中位)</th><th>R2 (AA+BA)</th><th>BA 新攻破</th><th>查询数</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="9" style="text-align:left;color:#7e8aa8">等待数据…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="flow">
+    <div class="step">
+      <div class="t">Round 2a · 扰动最小化（强化 AA 对抗样本）</div>
+      <div id="refinebox" class="v">—</div>
+    </div>
+    <div class="step">
+      <div class="t">Round 2b · 攻击 AA 幸存者（最小 L2 中位数）</div>
+      <div id="survbox" class="v">—</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>运行日志</h2>
+    <div class="logbox" id="logbox"></div>
+  </div>
+
+<script>
+const NAME={adv:'对抗训练 C1',pixeldp:'PixelDP σ=0.25',rs:'噪声训练 σ=0.51 (RS)'};
+const ORDER=['adv','pixeldp','rs'];
+let t0=null;
+function fmt(v,d=2){return (v===null||v===undefined||isNaN(v))?'—':Number(v).toFixed(d);}
+function cls(v){if(v==null)return'';if(v<20)return'low';if(v<50)return'mid';return'hi';}
+function hms(s){const m=Math.floor(s/60);return m>60?Math.floor(m/60)+'h'+(m%60)+'m':m+'m'+Math.round(s%60)+'s';}
+
+async function poll(){
+  try{
+    const r=await fetch('ba_progress.json?t='+Date.now());
+    render(await r.json());
+  }catch(e){}
+}
+function render(p){
+  document.getElementById('clock').textContent='更新于 '+new Date().toLocaleTimeString();
+  const dot=document.getElementById('dot');
+  dot.className='dot '+(p.status==='done'?'done':p.status==='error'?'err':'run');
+  document.getElementById('phase').textContent =
+    p.status==='error'?'❌ 出错':p.status==='done'?'✅ 实验完成':(p.phase||'运行中');
+  if(p.started_at){
+    const [h,m,s]=p.started_at.split(':').map(Number);
+    const st=new Date(); st.setHours(h,m,s,0);
+    document.getElementById('elapsed').textContent='已运行 '+hms((Date.now()-st.getTime())/1000);
+  }
+  const tb=document.getElementById('tbody'); tb.innerHTML='';
+  let any=false;
+  for(const k of ORDER){
+    const m=(p.models||[]).find(x=>x.key===k); if(!m) continue; any=true;
+    const tr=document.createElement('tr');
+    const r1=m.aa_robust, r2=m.r2;
+    const delta=(r1!=null&&r2!=null)?(r2-r1):null;
+    tr.innerHTML='<td>'+NAME[k]+'</td>'
+      +'<td><span class="tag">'+(m.aa_version||'—')+'</span></td>'
+      +'<td class="'+cls(r1)+'">'+fmt(r1)+'%</td>'
+      +'<td>'+fmt(m.aa_broken,0)+'</td>'
+      +'<td>'+fmt(m.survivors,0)+'</td>'
+      +'<td>'+fmt(m.aa_l2_median,4)+'</td>'
+      +'<td class="'+cls(r2)+'">'+fmt(r2)+'%</td>'
+      +'<td>'+(delta!=null?('<span class="arrow">'+fmt(r1)+' → '+fmt(r2)+'</span>'):'—')+'</td>'
+      +'<td>'+fmt(m.ba_queries,0)+'</td>';
+    tb.appendChild(tr);
+  }
+  if(!any) tb.innerHTML='<tr><td colspan="9" style="color:#7e8aa8">等待数据…</td></tr>';
+
+  const rb=document.getElementById('refinebox'), sb=document.getElementById('survbox');
+  const done=(p.models||[]).filter(m=>m.refine_ratio!=null);
+  rb.innerHTML = done.length? done.map(m=>NAME[m.key]+': L2 '+fmt(m.refine_before,4)
+      +' <span class="arrow">→</span> '+fmt(m.refine_after,4)
+      +' (×'+fmt(m.refine_ratio,3)+', n='+m.refine_n+')').join('<br>') : '—';
+  const sd=(p.models||[]).filter(m=>m.surv_min_l2_median!=null);
+  sb.innerHTML = sd.length? sd.map(m=>NAME[m.key]+': 中位最小 L2 '+fmt(m.surv_min_l2_median,4)
+      +' | 预算内攻破 '+fmt(m.surv_in_budget,0)+'/'+m.surv_n).join('<br>') : '—';
+
+  const lb=document.getElementById('logbox');
+  if(p.logs&&p.logs.length){ lb.innerHTML=p.logs.map(l=>'<div>'+String(l).replace(/</g,'&lt;')+'</div>').join('');
+    lb.scrollTop=lb.scrollHeight; }
+}
+setInterval(poll,1500); poll();
+</script>
+</body>
+</html>

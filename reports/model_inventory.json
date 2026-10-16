@@ -1,0 +1,100 @@
+[
+  {
+    "file": "adv_train.pth",
+    "arch": "LeNet (62K)",
+    "params": 62006,
+    "clean_acc_subset2000": 52.55,
+    "note": "单次前向"
+  },
+  {
+    "file": "adv_train_c1.pth",
+    "arch": "C1Net (200K)",
+    "params": 199722,
+    "clean_acc_subset2000": 67.5,
+    "note": "单次前向"
+  },
+  {
+    "file": "baseline.pth",
+    "arch": "LeNet (62K)",
+    "params": 62006,
+    "clean_acc_subset2000": 72.95,
+    "note": "单次前向"
+  },
+  {
+    "file": "diffuse_fixed.pth",
+    "arch": "C1Net(200K) + 输入扩散变换",
+    "params": 199722,
+    "clean_acc_subset2000": 86.4,
+    "note": "单次前向"
+  },
+  {
+    "file": "diffuse_global.pth",
+    "arch": "C1Net(200K) + 输入扩散变换",
+    "params": 199722,
+    "clean_acc_subset2000": 86.8,
+    "note": "单次前向"
+  },
+  {
+    "file": "diffuse_none.pth",
+    "arch": "C1Net(200K) + 输入扩散变换",
+    "params": 199722,
+    "clean_acc_subset2000": 86.4,
+    "note": "单次前向"
+  },
+  {
+    "file": "diffuse_spatial.pth",
+    "arch": "C1Net(200K) + 输入扩散变换",
+    "params": 199722,
+    "clean_acc_subset2000": 87.2,
+    "note": "单次前向"
+  },
+  {
+    "file": "distill.pth",
+    "arch": "LeNet (62K)",
+    "params": 62006,
+    "clean_acc_subset2000": 70.45,
+    "note": "单次前向"
+  },
+  {
+    "file": "mask_prep.pth",
+    "arch": "LeNet (62K) + 5bit 位深缩减",
+    "params": 62006,
+    "clean_acc_subset2000": 71.15,
+    "note": "单次前向"
+  },
+  {
+    "file": "mask_sat.pth",
+    "arch": "LeNet (62K) + log_sigmoid 饱和输出",
+    "params": 62006,
+    "clean_acc_subset2000": 71.1,
+    "note": "单次前向"
+  },
+  {
+    "file": "pixeldp_L0.03_c1.pth",
+    "arch": "C1Net(200K) + 输入高斯噪声 σ=0.0761",
+    "params": 199722,
+    "clean_acc_subset2000": 84.25,
+    "note": "20次投票"
+  },
+  {
+    "file": "pixeldp_L0.1_c1.pth",
+    "arch": "C1Net(200K) + 输入高斯噪声 σ=0.2537",
+    "params": 199722,
+    "clean_acc_subset2000": 76.2,
+    "note": "20次投票"
+  },
+  {
+    "file": "pixeldp_L0.2_c1.pth",
+    "arch": "C1Net(200K) + 输入高斯噪声 σ=0.5075",
+    "params": 199722,
+    "clean_acc_subset2000": 66.05,
+    "note": "20次投票"
+  },
+  {
+    "file": "teacher.pth",
+    "arch": "LeNet (62K)",
+    "params": 62006,
+    "clean_acc_subset2000": 73.65,
+    "note": "单次前向"
+  }
+]

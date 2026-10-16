@@ -1,0 +1,41 @@
+{
+  "adv": {
+    "name": "对抗训练 C1",
+    "n_aa": 82,
+    "n_verified": 50,
+    "l2_before_median": 1.6937,
+    "linf_before_median_255": 8.0,
+    "l2_after_median": 1.4109,
+    "linf_after_median_255": 23.96,
+    "ratio_l2": 0.84,
+    "frac_within_linf_budget": 14.0,
+    "steps": 1500,
+    "time_s": 12.2
+  },
+  "pixeldp": {
+    "name": "PixelDP σ=0.25",
+    "n_aa": 50,
+    "n_verified": 15,
+    "l2_before_median": 1.6624,
+    "linf_before_median_255": 8.0,
+    "l2_after_median": 0.8862,
+    "linf_after_median_255": 8.92,
+    "ratio_l2": NaN,
+    "frac_within_linf_budget": 46.7,
+    "steps": 1500,
+    "time_s": 118.2
+  },
+  "rs": {
+    "name": "噪声训练 σ=0.51 (RS)",
+    "n_aa": 37,
+    "n_verified": 17,
+    "l2_before_median": 1.6853,
+    "linf_before_median_255": 8.0,
+    "l2_after_median": 0.7309,
+    "linf_after_median_255": 8.08,
+    "ratio_l2": NaN,
+    "frac_within_linf_budget": 47.1,
+    "steps": 1500,
+    "time_s": 91.7
+  }
+}

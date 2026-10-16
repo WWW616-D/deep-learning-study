@@ -1,0 +1,93 @@
+{
+  "samples": 500,
+  "eps": 8.0,
+  "eot": 10,
+  "ba_steps_refine": 1500,
+  "ba_steps_survivor": 4000,
+  "models": {
+    "adv": {
+      "name": "对抗训练 C1",
+      "refine": {
+        "n": 100,
+        "verified": 100,
+        "l2_before_median": 1.6949,
+        "l2_after_median": 1.2318,
+        "ratio_median": 0.727,
+        "time_s": 23.3
+      },
+      "survivor": {
+        "n": 100,
+        "verified": 100,
+        "min_l2_median": 6.2483,
+        "n_within_1.744": 0,
+        "n_within_0.5": 0,
+        "n_within_0.0314": 0,
+        "time_s": 62.4
+      },
+      "aa_version": "standard",
+      "aa_robust": 26.4,
+      "aa_broken": 368,
+      "survivors": 132,
+      "aa_l2_median": 1.6951,
+      "ba_robust": 26.4,
+      "survivors_broken_by_ba": 0,
+      "ba_queries": 1220100
+    },
+    "pixeldp": {
+      "name": "PixelDP σ=0.25",
+      "refine": {
+        "n": 88,
+        "verified": 23,
+        "l2_before_median": 1.6674,
+        "l2_after_median": 1.1964,
+        "ratio_median": 0.721,
+        "time_s": 215.5
+      },
+      "survivor": {
+        "n": 101,
+        "verified": 10,
+        "min_l2_median": 11.1845,
+        "n_within_1.744": 0,
+        "n_within_0.5": 0,
+        "n_within_0.0314": 0,
+        "time_s": 666.9
+      },
+      "aa_version": "rand",
+      "aa_robust": 47.4,
+      "aa_broken": 263,
+      "survivors": 235,
+      "aa_l2_median": 1.6658,
+      "ba_robust": 47.4,
+      "survivors_broken_by_ba": 0,
+      "ba_queries": 10840450
+    },
+    "rs": {
+      "name": "噪声训练 σ=0.51 (RS)",
+      "refine": {
+        "n": 77,
+        "verified": 38,
+        "l2_before_median": 1.6891,
+        "l2_after_median": 1.0081,
+        "ratio_median": 0.594,
+        "time_s": 195.6
+      },
+      "survivor": {
+        "n": 87,
+        "verified": 11,
+        "min_l2_median": 9.2548,
+        "n_within_1.744": 1,
+        "n_within_0.5": 1,
+        "n_within_0.0314": 0,
+        "time_s": 576.4
+      },
+      "aa_version": "rand",
+      "aa_robust": 46.4,
+      "aa_broken": 268,
+      "survivors": 228,
+      "aa_l2_median": 1.6882,
+      "ba_robust": 46.2,
+      "survivors_broken_by_ba": 1,
+      "ba_queries": 9389160
+    }
+  }
+}
